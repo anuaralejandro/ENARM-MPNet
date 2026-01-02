@@ -54,11 +54,11 @@
 \begin{abstract}
 \textbf{Background:} The Examen Nacional de Aspirantes a Residencias Médicas (ENARM) is Mexico's high-stakes medical residency examination, with approximately 30,000 applicants competing annually for limited positions. Despite its critical importance, no specialized natural language processing models exist for Mexican medical education, and access to high-quality study resources remains inequitable.
 
-\textbf{Methods:} We present ENARM-MPNet-v2, the first Spanish-language medical embedding model specifically designed for ENARM preparation. Using contrastive learning with MultipleNegativesRankingLoss, we fine-tuned the all-mpnet-base-v2 model on 89,847 training pairs derived from 14,917 medical flashcards across 21 clinical specialties. The model was integrated into a production Retrieval-Augmented Generation (RAG) chatbot powered by Gemini~2.5~flash.
+\textbf{Methods:} We present ENARM-MPNet-v5, the first Spanish-language medical embedding model specifically designed for ENARM preparation. Using contrastive learning with MultipleNegativesRankingLoss, we fine-tuned the all-mpnet-base-v2 model on 12,467 clean training pairs derived from 14,917 medical flashcards across 21 clinical specialties. The model was integrated into a production Retrieval-Augmented Generation (RAG) chatbot powered by Gemini~2.5~Flash.
 
-\textbf{Results:} ENARM-MPNet-v2 achieved substantial improvements over the baseline model: Recall@1 increased from 62\% to 98\% (+58\%), Recall@5 from 85.5\% to 100\%, and Mean Reciprocal Rank from 0.716 to 0.989 (+38\%). The model achieved 100\% ranking accuracy with 70\% higher confidence margins. All 21 medical specialties showed improvement, with the largest gains in Psychiatry (+35 percentage points).
+\textbf{Results:} ENARM-MPNet-v5 achieved substantial improvements over the baseline model: Recall@1 increased from 62\% to 99.5\% (+60\%), Recall@5 from 85.5\% to 100\%, and Mean Reciprocal Rank from 0.716 to 0.998 (+39\%). The model achieved 100\% ranking accuracy with 105\% higher confidence margins. All 21 medical specialties showed improvement, with the largest gains in Psychiatry (+35 percentage points). Training completed in only 13 minutes on a consumer GPU.
 
-\textbf{Conclusions:} Domain-specific fine-tuning dramatically improves medical information retrieval for Spanish-language educational content. Our work demonstrates the feasibility of developing specialized NLP tools for underserved medical education contexts, provides a replicable template for resource-limited settings, and offers an ethical framework for AI-assisted exam preparation. ENARM-MPNet-v2 represents a first step toward revolutionizing medical education in Latin America through accessible, equitable AI tools.
+\textbf{Conclusions:} Domain-specific fine-tuning dramatically improves medical information retrieval for Spanish-language educational content. Our work demonstrates the feasibility of developing specialized NLP tools for underserved medical education contexts with minimal computational resources. The simple methodology (clean Q$\rightarrow$Q+A pairs) and rapid training time (13 minutes) provide a highly replicable template for resource-limited settings. ENARM-MPNet-v5 represents a first step toward revolutionizing medical education in Latin America through accessible, equitable AI tools.
 \end{abstract}
 
 %%======================================================================
@@ -73,10 +73,10 @@
 %%======================================================================
 \begin{highlights}
 \item First Spanish-language medical embedding model specifically designed for ENARM exam preparation
-\item 58\% relative improvement in Recall@1 through domain-specific contrastive learning
-\item 89,847 training pairs from 14,917 flashcards covering 21 medical specialties
+\item 60\% relative improvement in Recall@1 (62\% $\rightarrow$ 99.5\%) through domain-specific contrastive learning
+\item Simple, reproducible methodology: 12,467 clean Q$\rightarrow$Q+A training pairs from 14,917 flashcards
+\item Efficient training: 13 minutes on consumer GPU (NVIDIA RTX 4070)
 \item Production deployment in RAG chatbot serving Mexican medical students
-\item Ethical framework for responsible AI in medical education addressing equity and transparency
 \end{highlights}
 
 %%======================================================================
@@ -137,15 +137,15 @@ This work addresses three primary research questions:
 We present the following contributions:
 
 \begin{enumerate}
-    \item \textbf{ENARM-MPNet-v2:} The first Spanish-language medical embedding model specifically designed for Mexican medical education. Fine-tuned using contrastive learning on 89,847 training pairs from 14,917 medical flashcards across 21 clinical specialties.
+    \item \textbf{ENARM-MPNet-v5:} The first Spanish-language medical embedding model specifically designed for Mexican medical education. Fine-tuned using contrastive learning on 12,467 clean training pairs from 14,917 medical flashcards across 21 clinical specialties.
     
-    \item \textbf{Training Methodology:} A dual-pair contrastive learning approach combining question-answer pairs (strong semantic signal) with specialty-aware question-question pairs (domain structure preservation).
+    \item \textbf{Simple, Reproducible Methodology:} A clean Q$\rightarrow$Q+A contrastive learning approach that outperforms complex multi-strategy methods while training in only 13 minutes on consumer hardware.
     
     \item \textbf{Comprehensive Evaluation:} Multi-metric assessment including Recall@K, Mean Reciprocal Rank (MRR), ranking accuracy with confidence margins, and specialty-level performance analysis across all 21 ENARM specialties.
     
     \item \textbf{Production Deployment:} Integration into a real-world RAG chatbot powered by Gemini 2.5 Flash, serving as an educational assistant for Mexican medical students.
     
-    \item \textbf{Ethical Framework:} Guidelines for responsible AI deployment in medical education, addressing equity, transparency, and the balance between AI assistance and independent learning.
+    \item \textbf{Accessibility:} Demonstration that state-of-the-art retrieval performance is achievable with minimal computational resources, enabling replication in resource-limited settings.
 \end{enumerate}
 
 \subsection{Paper Organization}
@@ -205,7 +205,7 @@ Table~\ref{tab:model_comparison} summarizes the landscape of medical embedding m
 
 \begin{table}[t]
 \centering
-\caption{Comparison of medical embedding models. ENARM-MPNet-v2 is the first model targeting Spanish medical education.}
+\caption{Comparison of medical embedding models. ENARM-MPNet-v5 is the first model targeting Spanish medical education.}
 \label{tab:model_comparison}
 \begin{tabular}{lcccc}
 \toprule
@@ -216,7 +216,7 @@ ClinicalBERT & English & Clinical EHR & Classification \\
 PubMedBERT & English & Biomedical & General NLP \\
 Med-BERT & English & Structured EHR & Prediction \\
 \midrule
-\textbf{ENARM-MPNet-v2} & \textbf{Spanish} & \textbf{Medical Ed.} & \textbf{Retrieval} \\
+\textbf{ENARM-MPNet-v5} & \textbf{Spanish} & \textbf{Medical Ed.} & \textbf{Retrieval} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -240,7 +240,7 @@ This section describes our dataset, model architecture, training methodology, an
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{figures/fig5_architecture.pdf}
+    \includegraphics[width=\columnwidth]{figures/fig1_architecture.pdf}
     \caption{ENARM-MPNet RAG system architecture. User queries are embedded using our fine-tuned model, used to retrieve relevant flashcards and clinical guidelines, which are then passed to Gemini 2.5 Flash for grounded response generation.}
     \label{fig:architecture}
 \end{figure}
@@ -321,18 +321,20 @@ where $\text{sim}(\cdot, \cdot)$ denotes cosine similarity and $\tau$ is the tem
 
 \subsubsection{Training Pair Generation}
 
-We generated 89,847 training pairs using two complementary strategies:
+We adopted a simple, clean approach for training pair generation, creating 12,467 pairs (90\% train, 10\% evaluation):
 
-\begin{enumerate}
-    \item \textbf{Question-Answer pairs} (74,835 pairs, label weight 1.0): Each flashcard question paired with its answer provides strong semantic signal
-    \item \textbf{Question-Question pairs} (15,012 pairs, label weight 0.8): Questions from the same specialty paired together preserve domain structure
-\end{enumerate}
+\begin{itemize}
+    \item \textbf{Anchor}: The medical question exactly as written in the flashcard
+    \item \textbf{Positive}: The question concatenated with its answer (truncated to 512 characters)
+\end{itemize}
+
+This straightforward Q$\rightarrow$Q+A format proved more effective than complex multi-strategy approaches, as the model learns to associate questions with their complete context (question + answer) rather than isolated components.
 
 Figure~\ref{fig:pipeline} illustrates the complete training pipeline.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{figures/fig6_training_pipeline.pdf}
+    \includegraphics[width=\columnwidth]{figures/fig2_pipeline.pdf}
     \caption{ENARM-MPNet fine-tuning pipeline. Raw data undergoes cleaning, pair generation, and contrastive training with MNRL loss.}
     \label{fig:pipeline}
 \end{figure}
@@ -341,14 +343,14 @@ Figure~\ref{fig:contrastive} visualizes the contrastive learning objective, show
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.9\columnwidth]{figures/fig7_contrastive_learning.pdf}
+    \includegraphics[width=0.9\columnwidth]{figures/fig3_contrastive.pdf}
     \caption{MultipleNegativesRankingLoss (MNRL) training objective. Anchors are pulled toward their positive matches and pushed away from in-batch negatives.}
     \label{fig:contrastive}
 \end{figure}
 
 \subsection{Training Configuration}
 
-Training was conducted on a consumer-grade NVIDIA RTX 4070 GPU (8GB VRAM) with the following hyperparameters:
+Training was conducted on a consumer-grade NVIDIA RTX 4070 GPU (12GB VRAM) with the following hyperparameters:
 
 \begin{itemize}
     \item \textbf{Epochs:} 2
@@ -357,17 +359,19 @@ Training was conducted on a consumer-grade NVIDIA RTX 4070 GPU (8GB VRAM) with t
     \item \textbf{Warmup ratio:} 0.1
     \item \textbf{Precision:} FP16 mixed precision
     \item \textbf{Optimizer:} AdamW
-    \item \textbf{Training time:} $\sim$3 hours
+    \item \textbf{Training time:} \textbf{13 minutes}
 \end{itemize}
+
+The remarkably short training time demonstrates that domain-specific fine-tuning is highly accessible even with limited computational resources.
 
 We used the SentenceTransformer library \cite{reimers2019sentence} with InformationRetrievalEvaluator for checkpoint selection based on NDCG@10.
 
 \subsection{RAG System Integration}
 
-The fine-tuned ENARM-MPNet-v2 model was integrated into a production RAG chatbot with the following components:
+The fine-tuned ENARM-MPNet-v5 model was integrated into a production RAG chatbot with the following components:
 
 \begin{enumerate}
-    \item \textbf{Query embedding:} User queries are encoded using ENARM-MPNet-v2
+    \item \textbf{Query embedding:} User queries are encoded using ENARM-MPNet-v5
     \item \textbf{Semantic retrieval:} Top-K most similar documents retrieved via cosine similarity from the flashcard corpus
     \item \textbf{Full-text search:} GPCs searched using PostgreSQL full-text search for complementary results
     \item \textbf{Evidence ranking:} Retrieved documents ranked using Shekelle evidence hierarchy
@@ -378,8 +382,8 @@ Algorithm~\ref{alg:rag} presents the complete RAG retrieval and generation proce
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.85\columnwidth]{figures/algorithm1_rag.pdf}
-    \caption{RAG retrieval and generation algorithm. The process flows from user query encoding through parallel retrieval (semantic + full-text), evidence ranking, and LLM generation with citations.}
+    \includegraphics[width=0.85\columnwidth]{figures/fig2_pipeline.pdf}
+    \caption{RAG retrieval and generation pipeline. The process flows from user query encoding through parallel retrieval (semantic + full-text), evidence ranking, and LLM generation with citations.}
     \label{alg:rag}
 \end{figure}
 
@@ -396,17 +400,17 @@ The system serves as an educational assistant for medical students preparing for
 %% - Table 3: Evaluation metrics and formulas
 %% -----------------------------------------------------------------------
 
-This section describes the evaluation framework, baseline models, and metrics used to assess ENARM-MPNet-v2 performance.
+This section describes the evaluation framework, baseline models, and metrics used to assess ENARM-MPNet-v5 performance.
 
 \subsection{Baseline Models}
 
-We compare ENARM-MPNet-v2 against its base model:
+We compare ENARM-MPNet-v5 against its base model:
 
 \begin{itemize}
     \item \textbf{all-mpnet-base-v2} \cite{song2020mpnet}: The unmodified pretrained model from sentence-transformers, trained on 1B+ sentence pairs from diverse English corpora. This represents state-of-the-art general-purpose sentence embeddings.
 \end{itemize}
 
-We do not compare against domain-specific biomedical models (BioBERT, ClinicalBERT, PubMedBERT) as they lack the sentence embedding architecture required for efficient similarity search. Additionally, no Spanish-language medical embedding models exist for comparison.
+We do not compare against domain-specific biomedical models (BioBERT, ClinicalBERT, PubMedBERT) as they are English-only and lack the sentence embedding architecture required for efficient similarity search. No Spanish-language medical embedding models exist for comparison.
 
 \subsection{Evaluation Tasks}
 
@@ -505,7 +509,7 @@ We present experimental results across three evaluation tasks: information retri
 
 \subsection{Information Retrieval Performance}
 
-Table~\ref{tab:main_results} presents the main retrieval results. ENARM-MPNet-v2 demonstrates substantial improvements across all metrics.
+Table~\ref{tab:main_results} presents the main retrieval results. ENARM-MPNet-v5 demonstrates substantial improvements across all metrics.
 
 \begin{table}[t]
 \centering
@@ -513,43 +517,43 @@ Table~\ref{tab:main_results} presents the main retrieval results. ENARM-MPNet-v2
 \label{tab:main_results}
 \begin{tabular}{lccc}
 \toprule
-\textbf{Metric} & \textbf{Baseline} & \textbf{ENARM-MPNet} & \textbf{$\Delta$} \\
+\textbf{Metric} & \textbf{Baseline} & \textbf{ENARM-v5} & \textbf{$\Delta$} \\
 \midrule
-Recall@1 & 62.0\% & \textbf{98.0\%} & +36.0pp \\
+Recall@1 & 62.0\% & \textbf{99.5\%} & +37.5pp \\
 Recall@3 & 79.0\% & \textbf{100.0\%} & +21.0pp \\
 Recall@5 & 85.5\% & \textbf{100.0\%} & +14.5pp \\
 Recall@10 & 91.5\% & \textbf{100.0\%} & +8.5pp \\
 Recall@20 & 93.0\% & \textbf{100.0\%} & +7.0pp \\
 \midrule
-MRR & 0.716 & \textbf{0.989} & +0.273 \\
+MRR & 0.716 & \textbf{0.998} & +0.282 \\
 \midrule
 Ranking Accuracy & 99.5\% & \textbf{100.0\%} & +0.5pp \\
-Avg. Margin & 0.429 & \textbf{0.730} & +0.301 \\
+Avg. Margin & 0.429 & \textbf{0.879} & +0.450 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The fine-tuned model achieves \textbf{98\% Recall@1}, meaning the correct document is retrieved as the first result in 98\% of queries---a 58\% relative improvement over the baseline's 62\%. At K=3, performance reaches 100\%, indicating perfect retrieval within the top-3 results.
+The fine-tuned model achieves \textbf{99.5\% Recall@1}, meaning the correct document is retrieved as the first result in nearly all queries---a 60\% relative improvement over the baseline's 62\%. At K=3, performance reaches 100\%, indicating perfect retrieval within the top-3 results.
 
 Figure~\ref{fig:recall_curves} visualizes the Recall@K curves for both models.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{figures/fig1_recall_curves.pdf}
-    \caption{Recall@K performance curves. ENARM-MPNet-v2 achieves near-perfect retrieval at K=1 and perfect retrieval at K$\geq$3.}
+    \includegraphics[width=\columnwidth]{figures/fig4_recall_curves.pdf}
+    \caption{Recall@K performance curves. ENARM-MPNet-v5 achieves 99.5\% Recall@1 and perfect retrieval at K$\geq$3.}
     \label{fig:recall_curves}
 \end{figure}
 
 \subsection{Mean Reciprocal Rank}
 
-The Mean Reciprocal Rank (MRR) increased from 0.716 to 0.989, representing a 38\% relative improvement. An MRR of 0.989 indicates that the correct document appears almost always in the first position (average rank $\approx$ 1.01).
+The Mean Reciprocal Rank (MRR) increased from 0.716 to 0.998, representing a 39\% relative improvement. An MRR of 0.998 indicates that the correct document appears almost always in the first position (average rank $\approx$ 1.002).
 
 Figure~\ref{fig:mrr} presents the MRR comparison between models.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.8\columnwidth]{figures/fig2_mrr_comparison.pdf}
-    \caption{Mean Reciprocal Rank comparison. ENARM-MPNet-v2 achieves MRR of 0.989, indicating near-perfect first-result accuracy.}
+    \includegraphics[width=0.8\columnwidth]{figures/fig5_mrr.pdf}
+    \caption{Mean Reciprocal Rank comparison. ENARM-MPNet-v5 achieves MRR of 0.998, indicating near-perfect first-result accuracy.}
     \label{fig:mrr}
 \end{figure}
 
@@ -559,15 +563,15 @@ Beyond accuracy, we analyze the \textbf{confidence margin}: the similarity diffe
 
 \begin{itemize}
     \item \textbf{Baseline margin}: 0.429 $\pm$ 0.148
-    \item \textbf{ENARM-MPNet-v2 margin}: 0.730 $\pm$ 0.120
+    \item \textbf{ENARM-MPNet-v5 margin}: 0.879 $\pm$ 0.112
 \end{itemize}
 
-The fine-tuned model achieves \textbf{70\% higher margins} with \textbf{lower variance}, indicating more reliable and consistent semantic representations. Figure~\ref{fig:margin} shows the margin distributions.
+The fine-tuned model achieves \textbf{105\% higher margins} (more than double) with \textbf{lower variance}, indicating more reliable and consistent semantic representations. Figure~\ref{fig:margin} shows the margin distributions.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=0.9\columnwidth]{figures/fig3_margin_distribution.pdf}
-    \caption{Similarity margin distributions. ENARM-MPNet-v2 exhibits higher confidence margins with reduced variance.}
+    \includegraphics[width=0.9\columnwidth]{figures/fig6_margins.pdf}
+    \caption{Similarity margin distributions. ENARM-MPNet-v5 exhibits 105\% higher confidence margins (0.879 vs 0.429) with reduced variance.}
     \label{fig:margin}
 \end{figure}
 
@@ -577,7 +581,7 @@ We evaluated performance across all 21 ENARM medical specialties. Table~\ref{tab
 
 \begin{table}[t]
 \centering
-\caption{Specialty-level Recall@5 results (selected specialties). All 21 specialties achieve 100\% Recall@5 with ENARM-MPNet-v2.}
+\caption{Specialty-level Recall@5 results (selected specialties). All 21 specialties achieve 100\% Recall@5 with ENARM-MPNet-v5.}
 \label{tab:specialty}
 \begin{tabular}{lcccc}
 \toprule
@@ -602,8 +606,8 @@ Figure~\ref{fig:specialty} visualizes the improvement across specialties.
 
 \begin{figure}[t]
     \centering
-    \includegraphics[width=\columnwidth]{figures/fig4_specialty_improvement.pdf}
-    \caption{Improvement in Recall@5 by medical specialty. All 21 specialties show improvement, with largest gains in Psychiatry and Nephrology.}
+    \includegraphics[width=\columnwidth]{figures/fig7_specialty.pdf}
+    \caption{Improvement in Recall@5 by medical specialty. All 21 specialties achieve 100\% with ENARM-MPNet-v5, with largest baseline gaps in Psychiatry and Nephrology.}
     \label{fig:specialty}
 \end{figure}
 
@@ -614,7 +618,7 @@ To analyze whether fine-tuning improved the semantic organization of the embeddi
 \begin{figure}[t]
     \centering
     \includegraphics[width=\columnwidth]{figures/fig8_specialty_heatmap.pdf}
-    \caption{Inter-specialty embedding similarity heatmaps. ENARM-MPNet-v2 (right) shows higher within-specialty similarity (diagonal) and lower between-specialty similarity, indicating better specialty separation.}
+    \caption{Inter-specialty embedding similarity heatmaps. ENARM-MPNet-v5 (right) shows higher within-specialty similarity (diagonal) and lower between-specialty similarity, indicating better specialty separation.}
     \label{fig:heatmap}
 \end{figure}
 
@@ -645,15 +649,15 @@ Our results demonstrate that domain-specific fine-tuning yields dramatic improve
 
 \subsection{Interpretation of Results}
 
-The 58\% relative improvement in Recall@1 (62\% $\rightarrow$ 98\%) represents a substantial gain with direct practical implications. In a RAG-based educational chatbot, Recall@1 determines whether the most relevant document is retrieved on the first attempt. Our results suggest that domain-specific fine-tuning transforms a general-purpose model into a reliable medical information retrieval tool.
+The 60\% relative improvement in Recall@1 (62\% $\rightarrow$ 99.5\%) represents a substantial gain with direct practical implications. In a RAG-based educational chatbot, Recall@1 determines whether the most relevant document is retrieved on the first attempt. Our results demonstrate that domain-specific fine-tuning transforms a general-purpose model into a highly reliable medical information retrieval tool.
 
 The dramatic improvement in Psiquiatría (+35 percentage points) merits attention. Psychiatric terminology in Spanish includes colloquialisms, regional variations, and concepts that differ from English psychiatric nomenclature. The base model, trained predominantly on English data, struggled to capture these nuances. Fine-tuning on Mexican medical content enabled the model to learn domain-specific semantic relationships.
 
-The 70\% increase in confidence margins indicates not merely improved accuracy but fundamentally different embedding representations. The fine-tuned model creates clearer separation between semantically related and unrelated content, reducing the risk of near-miss errors in production systems.
+The 105\% increase in confidence margins (more than doubling from 0.429 to 0.879) indicates not merely improved accuracy but fundamentally different embedding representations. The fine-tuned model creates clearer separation between semantically related and unrelated content, reducing the risk of near-miss errors in production systems.
 
 \subsection{Comparison with Prior Work}
 
-Direct comparison with prior medical embedding models is challenging due to differences in evaluation datasets, languages, and tasks. However, our results contextualize ENARM-MPNet-v2 within the broader landscape:
+Direct comparison with prior medical embedding models is challenging due to differences in evaluation datasets, languages, and tasks. However, our results contextualize ENARM-MPNet-v5 within the broader landscape:
 
 \begin{itemize}
     \item \textbf{BioBERT/PubMedBERT}: Report Recall@5 of 85--87\% on English biomedical corpora \cite{lee2020biobert, gu2021domain}. Our model achieves 100\% on Spanish medical education content.
@@ -674,11 +678,11 @@ The current state of AI and machine learning adoption in Latin American healthca
     \item \textbf{Equity concerns}: Access to advanced educational resources remains heavily skewed toward well-resourced institutions and urban centers
 \end{itemize}
 
-Our work represents an initial step toward addressing these gaps. By demonstrating that domain-specific fine-tuning yields dramatic improvements even with modest computational resources (consumer GPU, 3 hours training), we provide a replicable template for developing localized medical NLP tools across Latin America.
+Our work represents an initial step toward addressing these gaps. By demonstrating that domain-specific fine-tuning yields dramatic improvements even with minimal computational resources (consumer GPU, 13 minutes training), we provide a highly replicable template for developing localized medical NLP tools across Latin America.
 
 \subsection{Transformative Potential for Medical Education}
 
-We envision AI-powered tools like ENARM-MPNet-v2 as catalysts for a paradigm shift in medical education:
+We envision AI-powered tools like ENARM-MPNet-v5 as catalysts for a paradigm shift in medical education:
 
 \begin{enumerate}
     \item \textbf{Democratization of expertise}: High-quality study resources, previously available only through expensive preparatory courses, become accessible to all students regardless of socioeconomic background
@@ -776,7 +780,7 @@ We commit to ongoing monitoring and mitigation of these biases through regular e
 \section{Conclusion}
 \label{sec:conclusion}
 
-We have presented ENARM-MPNet-v2, the first Spanish-language medical embedding model specifically designed for Mexican medical education. Through contrastive learning on 89,847 training pairs derived from 14,917 medical flashcards, we achieved transformative improvements in retrieval performance: Recall@1 increased from 62\% to 98\% (+58\%), Mean Reciprocal Rank from 0.716 to 0.989 (+38\%), and ranking confidence margins improved by 70\%. The model was successfully deployed in a production RAG chatbot serving Mexican medical students preparing for the ENARM examination.
+We have presented ENARM-MPNet-v5, the first Spanish-language medical embedding model specifically designed for Mexican medical education. Through contrastive learning on 12,467 clean training pairs derived from 14,917 medical flashcards using a simple Q$\rightarrow$Q+A format, we achieved transformative improvements in retrieval performance: Recall@1 increased from 62\% to 99.5\% (+60\%), Mean Reciprocal Rank from 0.716 to 0.998 (+39\%), and ranking confidence margins more than doubled (+105\%). Remarkably, training completed in only 13 minutes on a consumer GPU. The model was successfully deployed in a production RAG chatbot serving Mexican medical students preparing for the ENARM examination.
 
 \subsection{Key Contributions}
 
@@ -787,9 +791,9 @@ Our work makes several contributions to medical NLP and AI in education:
     
     \item We provide \textbf{the first Spanish medical embedding model} for Latin American healthcare contexts---addressing a critical gap in a linguistic community of over 550 million speakers that has been largely overlooked by the NLP research community
     
-    \item We show that \textbf{near-perfect retrieval is achievable} with modest computational resources (consumer GPU, 3-hour training), making this approach accessible to researchers in resource-limited settings
+    \item We show that \textbf{near-perfect retrieval is achievable} with modest computational resources (consumer GPU, 13-minute training), making this approach highly accessible to researchers in resource-limited settings
     
-    \item We present a \textbf{comprehensive ethical framework} for responsible AI deployment in medical education, balancing democratization with safety
+    \item We demonstrate that \textbf{simpler is better}: a clean Q$\rightarrow$Q+A training strategy outperforms complex multi-pair approaches while dramatically reducing training time
 \end{enumerate}
 
 \subsection{A Call for Regional AI Development}
@@ -823,7 +827,7 @@ Several directions merit further investigation:
 
 \subsection{Closing Remarks}
 
-The ENARM examination determines the career trajectories of 30,000 Mexican physicians annually, yet access to high-quality preparation resources remains inequitable. By developing and deploying ENARM-MPNet-v2, we take a concrete step toward democratizing medical education through AI. Our work demonstrates that meaningful progress is possible even with limited resources, and we hope it inspires similar efforts across Latin America and other underserved regions.
+The ENARM examination determines the career trajectories of 30,000 Mexican physicians annually, yet access to high-quality preparation resources remains inequitable. By developing and deploying ENARM-MPNet-v5, we take a concrete step toward democratizing medical education through AI. Our work demonstrates that meaningful progress is possible even with limited resources---achieving state-of-the-art retrieval with just 13 minutes of training---and we hope it inspires similar efforts across Latin America and other underserved regions.
 
 The future of medical education will increasingly integrate AI-powered tools. It is imperative that this future be built with equity, transparency, and responsibility at its core. We offer our work as both a technical contribution and an ethical template for this emerging field.
 
@@ -852,7 +856,7 @@ This work utilized artificial intelligence tools in the following capacities, in
     
     \item \textbf{Production System:} The deployed RAG chatbot uses Google's Gemini 2.5 Flash for response generation, grounded in retrieved medical content.
     
-    \item \textbf{Model Fine-tuning:} The core contribution---ENARM-MPNet-v2---was trained using the SentenceTransformers library with MultipleNegativesRankingLoss. No generative AI was used in the fine-tuning process itself.
+    \item \textbf{Model Fine-tuning:} The core contribution---ENARM-MPNet-v5---was trained using the SentenceTransformers library with MultipleNegativesRankingLoss. No generative AI was used in the fine-tuning process itself.
 \end{itemize}
 
 The author takes full responsibility for all content, analysis, and conclusions in this manuscript.
@@ -867,7 +871,7 @@ The flashcard dataset used for training was derived from publicly available Anki
 %% CODE AVAILABILITY
 %%======================================================================
 \section*{Code Availability}
-The training scripts, evaluation framework, and model inference code are available at [Repository to be provided upon acceptance]. The fine-tuned ENARM-MPNet-v2 model weights will be made available through Hugging Face upon publication. All experiments were conducted using:
+The training scripts, evaluation framework, and model inference code are available at \url{https://github.com/anuaralejandro/ENARM-MPNet}. The fine-tuned ENARM-MPNet-v5 model weights are available on Hugging Face at \url{https://huggingface.co/anuario/enarm-mpnet-v5}. All experiments were conducted using:
 \begin{itemize}
     \item Python 3.10.12
     \item PyTorch 2.1.0
