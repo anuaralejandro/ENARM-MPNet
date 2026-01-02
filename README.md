@@ -53,8 +53,8 @@ enarm-mpnet/
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/enarm-mpnet.git
-cd enarm-mpnet
+git clone https://github.com/anuaralejandro/ENARM-MPNet.git
+cd ENARM-MPNet
 
 # Create environment
 conda create -n enarm-mpnet python=3.10 -y
