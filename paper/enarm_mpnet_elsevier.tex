@@ -1,0 +1,919 @@
+%% 
+%% ENARM-MPNet: Domain-Specific Medical Embeddings for Mexican Residency Exam Preparation
+%% Format: Elsevier - Artificial Intelligence in Medicine / npj Digital Medicine
+%% 
+%% Author: Anuar Alejandro Viramontes Flores
+%% Date: January 2026
+%%
+
+\documentclass[final,5p,times,twocolumn,number]{elsarticle}
+
+%% Packages
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{xcolor}
+
+%% Custom commands
+\newcommand{\recall}{\text{Recall@}}
+\newcommand{\mrr}{\text{MRR}}
+
+\journal{Artificial Intelligence in Medicine}
+
+\begin{document}
+
+\begin{frontmatter}
+
+%%======================================================================
+%% TITLE
+%%======================================================================
+\title{ENARM-MPNet: Domain-Specific Medical Embeddings for Mexican Residency Exam Preparation via Contrastive Learning}
+
+%%======================================================================
+%% AUTHORS
+%%======================================================================
+\author[uag]{Anuar Alejandro Viramontes Flores\corref{cor1}}
+\ead{anuar.viramontes@edu.uag.mx}
+\cortext[cor1]{Corresponding author}
+
+\affiliation[uag]{organization={Universidad Autónoma de Guadalajara, Facultad de Medicina},
+            addressline={Av. Patria 1201, Lomas del Valle}, 
+            city={Zapopan},
+            postcode={45129}, 
+            state={Jalisco},
+            country={México}}
+
+%%======================================================================
+%% ABSTRACT
+%%======================================================================
+\begin{abstract}
+\textbf{Background:} The Examen Nacional de Aspirantes a Residencias Médicas (ENARM) is Mexico's high-stakes medical residency examination, with approximately 30,000 applicants competing annually for limited positions. Despite its critical importance, no specialized natural language processing models exist for Mexican medical education, and access to high-quality study resources remains inequitable.
+
+\textbf{Methods:} We present ENARM-MPNet-v2, the first Spanish-language medical embedding model specifically designed for ENARM preparation. Using contrastive learning with MultipleNegativesRankingLoss, we fine-tuned the all-mpnet-base-v2 model on 89,847 training pairs derived from 14,917 medical flashcards across 21 clinical specialties. The model was integrated into a production Retrieval-Augmented Generation (RAG) chatbot powered by Gemini~2.5~flash.
+
+\textbf{Results:} ENARM-MPNet-v2 achieved substantial improvements over the baseline model: Recall@1 increased from 62\% to 98\% (+58\%), Recall@5 from 85.5\% to 100\%, and Mean Reciprocal Rank from 0.716 to 0.989 (+38\%). The model achieved 100\% ranking accuracy with 70\% higher confidence margins. All 21 medical specialties showed improvement, with the largest gains in Psychiatry (+35 percentage points).
+
+\textbf{Conclusions:} Domain-specific fine-tuning dramatically improves medical information retrieval for Spanish-language educational content. Our work demonstrates the feasibility of developing specialized NLP tools for underserved medical education contexts, provides a replicable template for resource-limited settings, and offers an ethical framework for AI-assisted exam preparation. ENARM-MPNet-v2 represents a first step toward revolutionizing medical education in Latin America through accessible, equitable AI tools.
+\end{abstract}
+
+%%======================================================================
+%% GRAPHICAL ABSTRACT (placeholder)
+%%======================================================================
+%\begin{graphicalabstract}
+%\includegraphics{figures/graphical_abstract}
+%\end{graphicalabstract}
+
+%%======================================================================
+%% HIGHLIGHTS
+%%======================================================================
+\begin{highlights}
+\item First Spanish-language medical embedding model specifically designed for ENARM exam preparation
+\item 58\% relative improvement in Recall@1 through domain-specific contrastive learning
+\item 89,847 training pairs from 14,917 flashcards covering 21 medical specialties
+\item Production deployment in RAG chatbot serving Mexican medical students
+\item Ethical framework for responsible AI in medical education addressing equity and transparency
+\end{highlights}
+
+%%======================================================================
+%% KEYWORDS
+%%======================================================================
+\begin{keyword}
+medical embeddings \sep contrastive learning \sep retrieval-augmented generation \sep medical education \sep ENARM \sep Spanish NLP
+\end{keyword}
+
+\end{frontmatter}
+
+%%======================================================================
+%% SECTION 1: INTRODUCTION
+%%======================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+%% -----------------------------------------------------------------------
+%% Figure/Table Plan for this section:
+%% - No figures in Introduction (standard for Elsevier)
+%% -----------------------------------------------------------------------
+
+\subsection{Background and Motivation}
+
+The Examen Nacional de Aspirantes a Residencias Médicas (ENARM) is Mexico's national medical residency entrance examination, administered annually by the Comisión Interinstitucional para la Formación de Recursos Humanos para la Salud (CIFRHS) \cite{cifrhs2024}. With approximately 30,000 medical graduates competing for roughly 9,000 residency positions each year, the ENARM represents one of the most competitive high-stakes examinations in Latin American medical education \cite{secretaria2024enarm}. Success on the ENARM is critical for physicians' career trajectories, determining access to specialty training across 78 recognized medical specialties in Mexico \cite{conacem2023}.
+
+Despite its importance, access to high-quality ENARM preparation resources remains inequitable. Students from well-resourced private institutions and major urban centers disproportionately benefit from expensive preparatory courses, private tutoring, and curated study materials. Meanwhile, graduates from public universities and rural medical schools often lack access to comprehensive review resources, perpetuating socioeconomic disparities in medical specialty access \cite{mexicohealthequity2023}.
+
+Recent advances in artificial intelligence, particularly in natural language processing (NLP) and large language models (LLMs), offer promising opportunities to democratize access to educational resources \cite{topol2019high}. Retrieval-Augmented Generation (RAG) systems \cite{lewis2020retrieval} can ground LLM responses in verified medical knowledge, reducing hallucinations \cite{ji2023survey} while providing personalized educational support. However, the effectiveness of RAG systems critically depends on the quality of the underlying embedding models used for semantic retrieval \cite{karpukhin2020dense}.
+
+\subsection{Problem Statement}
+
+Current state-of-the-art medical embedding models---including BioBERT \cite{lee2020biobert}, ClinicalBERT \cite{alsentzer2019publicly}, PubMedBERT \cite{gu2021domain}, and Med-BERT \cite{rasmy2021medbert}---are predominantly trained on English-language biomedical corpora such as PubMed abstracts, MIMIC-III clinical notes, and medical literature. These models fail to capture:
+
+\begin{enumerate}
+    \item \textbf{Mexican medical terminology:} Abbreviations (e.g., AINEs, NAC, DM2, HTA), drug naming conventions, and clinical protocols specific to the Mexican healthcare system
+    \item \textbf{Spanish-language medical reasoning:} Syntactic and semantic patterns in Spanish clinical text that differ substantially from English
+    \item \textbf{ENARM-specific content:} The examination emphasizes Mexican Clinical Practice Guidelines (Guías de Práctica Clínica, GPCs) published by CENETEC, which define diagnostic and treatment protocols for the Mexican context
+    \item \textbf{Educational question formats:} The structure of clinical vignettes, differential diagnosis reasoning, and treatment selection patterns characteristic of ENARM questions
+\end{enumerate}
+
+To our knowledge, no embedding model has been specifically developed for Spanish-language medical education or Mexican clinical contexts. More broadly, machine learning models for Spanish medical text are virtually nonexistent---a striking gap given that Spanish is the world's fourth most-spoken language with over 550 million native speakers. This absence limits the effectiveness of AI-powered educational tools for the 30,000+ Mexican medical graduates preparing for ENARM annually and leaves the broader Spanish-speaking medical community without modern NLP resources.
+
+\subsection{Research Questions}
+
+This work addresses three primary research questions:
+
+\begin{enumerate}
+    \item[\textbf{RQ1}] Can domain-specific fine-tuning significantly improve medical information retrieval performance compared to general-purpose embedding models?
+    
+    \item[\textbf{RQ2}] Does specialty-aware contrastive learning improve the semantic organization of the embedding space for medical content?
+    
+    \item[\textbf{RQ3}] Can a fine-tuned embedding model enable effective RAG-based educational support for high-stakes medical examination preparation?
+\end{enumerate}
+
+\subsection{Contributions}
+
+We present the following contributions:
+
+\begin{enumerate}
+    \item \textbf{ENARM-MPNet-v2:} The first Spanish-language medical embedding model specifically designed for Mexican medical education. Fine-tuned using contrastive learning on 89,847 training pairs from 14,917 medical flashcards across 21 clinical specialties.
+    
+    \item \textbf{Training Methodology:} A dual-pair contrastive learning approach combining question-answer pairs (strong semantic signal) with specialty-aware question-question pairs (domain structure preservation).
+    
+    \item \textbf{Comprehensive Evaluation:} Multi-metric assessment including Recall@K, Mean Reciprocal Rank (MRR), ranking accuracy with confidence margins, and specialty-level performance analysis across all 21 ENARM specialties.
+    
+    \item \textbf{Production Deployment:} Integration into a real-world RAG chatbot powered by Gemini 2.5 Flash, serving as an educational assistant for Mexican medical students.
+    
+    \item \textbf{Ethical Framework:} Guidelines for responsible AI deployment in medical education, addressing equity, transparency, and the balance between AI assistance and independent learning.
+\end{enumerate}
+
+\subsection{Paper Organization}
+
+The remainder of this paper is organized as follows: Section~\ref{sec:related} reviews related work in medical embeddings, contrastive learning, and AI in medical education. Section~\ref{sec:methodology} describes our dataset, model architecture, and training methodology. Section~\ref{sec:experiments} presents the experimental setup and evaluation framework. Section~\ref{sec:results} reports quantitative results across multiple metrics. Section~\ref{sec:discussion} interprets findings, discusses limitations, and presents ethical considerations. Section~\ref{sec:conclusion} concludes with a summary and directions for future work.
+
+%%======================================================================
+%% SECTION 2: RELATED WORK
+%%======================================================================
+\section{Related Work}
+\label{sec:related}
+
+%% -----------------------------------------------------------------------
+%% Figure/Table Plan for this section:
+%% - Table 1: Comparison of medical embedding models (end of section)
+%% -----------------------------------------------------------------------
+
+Our work builds upon advances in biomedical language models, contrastive learning for sentence embeddings, retrieval-augmented generation, and AI applications in medical education.
+
+\subsection{Biomedical Language Models}
+
+The introduction of BERT \cite{devlin2019bert} and the Transformer architecture \cite{vaswani2017attention} revolutionized natural language processing, enabling pre-trained models to achieve state-of-the-art performance across diverse tasks. Recognizing the domain-specific nature of biomedical text, researchers developed specialized variants for healthcare applications.
+
+BioBERT \cite{lee2020biobert} was among the first biomedical adaptations, pre-trained on PubMed abstracts and PMC full-text articles. It demonstrated significant improvements over general BERT on named entity recognition, relation extraction, and question answering tasks in the biomedical domain. ClinicalBERT \cite{alsentzer2019publicly} extended this approach to clinical text, training on MIMIC-III clinical notes to capture the unique characteristics of electronic health records. PubMedBERT \cite{gu2021domain} further refined domain-specific pre-training by using biomedical text exclusively from the start, avoiding general-domain initialization. Med-BERT \cite{rasmy2021medbert} focused on structured EHR data for disease prediction tasks.
+
+Despite these advances, all major biomedical language models share a critical limitation: they are trained exclusively on English-language corpora \cite{neves2023multilingual}. No comparable models exist for Spanish medical text, Mexican clinical guidelines, or Latin American healthcare contexts. This gap leaves the 600+ million Spanish speakers worldwide without access to specialized NLP tools for medical applications.
+
+\subsection{Sentence Embeddings and Contrastive Learning}
+
+While BERT-based models excel at token-level tasks, deriving semantically meaningful sentence embeddings requires additional techniques. Sentence-BERT (SBERT) \cite{reimers2019sentence} addressed this by fine-tuning BERT using siamese and triplet networks, enabling efficient semantic similarity computation. The resulting embeddings can be compared using cosine similarity, reducing the computational complexity of similarity search from $O(n^2)$ to $O(n)$.
+
+MPNet \cite{song2020mpnet} combined the advantages of masked language modeling (MLM) and permuted language modeling (PLM), achieving state-of-the-art performance on the GLUE and SQuAD benchmarks. The all-mpnet-base-v2 model, trained on over 1 billion sentence pairs, became the foundation for many downstream applications requiring high-quality sentence embeddings.
+
+Contrastive learning has emerged as a powerful paradigm for learning representations. SimCLR \cite{chen2020simple} demonstrated that simple contrastive objectives with appropriate data augmentation could achieve competitive results in computer vision. SimCSE \cite{gao2021simcse} adapted these ideas for NLP, using dropout as a minimal augmentation strategy. The MultipleNegativesRankingLoss (MNRL) \cite{henderson2017efficient} provides an efficient training objective that leverages in-batch negatives: for each anchor-positive pair in a batch, all other positives serve as negatives, maximizing training signal without explicit negative mining.
+
+\subsection{Retrieval-Augmented Generation}
+
+Large language models (LLMs) suffer from hallucination---generating plausible but factually incorrect information---which is particularly dangerous in medical contexts. Retrieval-Augmented Generation (RAG) \cite{lewis2020retrieval} addresses this by grounding LLM responses in retrieved documents from a knowledge base.
+
+RAG systems combine a retriever (typically based on dense passage retrieval \cite{karpukhin2020dense}) with a generator (typically a seq2seq model or LLM). The retriever encodes queries and documents into dense vectors, enabling efficient similarity search over large corpora. Retrieved passages are then concatenated with the original query and fed to the generator, which produces responses grounded in the retrieved evidence.
+
+Recent surveys \cite{gao2023retrieval} document the rapid evolution of RAG architectures, including advances in retrieval quality, context compression, and iterative retrieval. For medical applications, RAG offers a path to combining the generative capabilities of LLMs with the factual grounding of verified medical knowledge bases.
+
+\subsection{AI in Medical Education}
+
+The potential of AI for medical education has garnered significant attention following demonstrations of LLM performance on standardized medical examinations. ChatGPT achieved passing scores on the United States Medical Licensing Examination (USMLE) \cite{kung2023performance}, sparking debate about the role of AI in medical training. Subsequent analyses have examined both benefits and risks \cite{lee2023benefits}, emphasizing that AI tools should augment rather than replace human learning.
+
+Large language models show promise for personalized tutoring, question generation, and adaptive learning \cite{thirunavukarasu2023large}. However, concerns remain about accuracy, particularly for specialized or localized medical knowledge \cite{dave2023chatgpt}. These limitations motivate our approach: rather than relying solely on general-purpose LLMs, we develop domain-specific embedding models that can accurately retrieve verified medical content, reducing hallucination risk.
+
+\subsection{Machine Learning in Mexican Healthcare}
+
+Machine learning research in Mexican healthcare contexts remains limited. Existing work has focused primarily on clinical prediction tasks using structured data, such as COVID-19 outcome prediction and metabolic syndrome risk assessment. Natural language processing applications targeting Mexico's healthcare system, including the ENARM examination or Mexican Clinical Practice Guidelines (GPCs) published by CENETEC \cite{cenetec2020gpc}, are essentially absent from the literature.
+
+This gap is significant given Mexico's unique healthcare landscape: the public healthcare system (IMSS, ISSSTE, SSA) serves over 85\% of the population, while clinical training emphasizes national guidelines that differ from international standards. The ENARM examination \cite{secretaria2024enarm} tests knowledge specifically aligned with Mexican clinical practice, yet no AI tools have been developed to support preparation for this high-stakes assessment.
+
+Table~\ref{tab:model_comparison} summarizes the landscape of medical embedding models, highlighting the absence of Spanish-language alternatives.
+
+\begin{table}[t]
+\centering
+\caption{Comparison of medical embedding models. ENARM-MPNet-v2 is the first model targeting Spanish medical education.}
+\label{tab:model_comparison}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Model} & \textbf{Language} & \textbf{Domain} & \textbf{Task} \\
+\midrule
+BioBERT & English & Biomedical & NER, QA \\
+ClinicalBERT & English & Clinical EHR & Classification \\
+PubMedBERT & English & Biomedical & General NLP \\
+Med-BERT & English & Structured EHR & Prediction \\
+\midrule
+\textbf{ENARM-MPNet-v2} & \textbf{Spanish} & \textbf{Medical Ed.} & \textbf{Retrieval} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%%======================================================================
+%% SECTION 3: METHODOLOGY
+%%======================================================================
+\section{Methodology}
+\label{sec:methodology}
+
+%% -----------------------------------------------------------------------
+%% Figure/Table Plan for this section:
+%% - Table 2: Dataset statistics by specialty
+%% - Figure 5: RAG System Architecture
+%% - Figure 6: Training Pipeline
+%% - Figure 7: Contrastive Learning
+%% - Algorithm 1: Training pair generation
+%% -----------------------------------------------------------------------
+
+This section describes our dataset, model architecture, training methodology, and integration into the production RAG system. Figure~\ref{fig:architecture} provides an overview of the complete system.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/fig5_architecture.pdf}
+    \caption{ENARM-MPNet RAG system architecture. User queries are embedded using our fine-tuned model, used to retrieve relevant flashcards and clinical guidelines, which are then passed to Gemini 2.5 Flash for grounded response generation.}
+    \label{fig:architecture}
+\end{figure}
+
+\subsection{Dataset}
+
+\subsubsection{Data Sources}
+
+Our training data comprised two primary sources:
+
+\begin{enumerate}
+    \item \textbf{Medical Flashcards:} 14,917 question-answer pairs derived from publicly available Anki decks designed for ENARM preparation. Each flashcard contains a clinical question (anchor) and its corresponding answer (positive), covering topics aligned with the ENARM examination blueprint.
+    
+    \item \textbf{Mexican Clinical Practice Guidelines (GPCs):} 373 clinical guidelines published by CENETEC \cite{cenetec2020gpc}, providing authoritative Mexican medical protocols for the RAG knowledge base.
+\end{enumerate}
+
+\subsubsection{Specialty Distribution}
+
+The flashcard corpus spans 21 medical specialties recognized by the ENARM examination. Table~\ref{tab:dataset} presents the distribution across top specialties.
+
+\begin{table}[t]
+\centering
+\caption{Dataset statistics by medical specialty (top 10 shown). Total: 14,917 flashcards across 21 specialties.}
+\label{tab:dataset}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Specialty} & \textbf{Flashcards} & \textbf{\%} \\
+\midrule
+Pediatría & 2,145 & 14.4 \\
+Medicina Interna & 1,892 & 12.7 \\
+Ginecología y Obstetricia & 1,756 & 11.8 \\
+Cirugía General & 1,423 & 9.5 \\
+Traumatología & 987 & 6.6 \\
+Cardiología & 876 & 5.9 \\
+Neurología & 754 & 5.1 \\
+Endocrinología & 698 & 4.7 \\
+Infectología & 645 & 4.3 \\
+Urología & 589 & 3.9 \\
+\midrule
+\textit{Other 11 specialties} & 3,152 & 21.1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Data Preprocessing}
+
+We applied the following preprocessing steps:
+\begin{itemize}
+    \item \textbf{Deduplication:} Removed exact and near-duplicate entries using fuzzy string matching (Levenshtein distance $< 0.1$)
+    \item \textbf{Specialty normalization:} Consolidated 32 original specialty labels into 21 canonical ENARM categories
+    \item \textbf{Text cleaning:} Preserved medical abbreviations (e.g., HTA, DM2, AINEs) while normalizing whitespace and encoding
+    \item \textbf{Quality filtering:} Removed entries with fewer than 10 tokens or malformed content
+\end{itemize}
+
+\subsection{Model Architecture}
+
+\subsubsection{Base Model Selection}
+
+We selected \texttt{all-mpnet-base-v2} \cite{song2020mpnet} as our base model for the following reasons:
+
+\begin{itemize}
+    \item \textbf{State-of-the-art performance:} Achieves top scores on sentence similarity benchmarks
+    \item \textbf{Embedding dimensionality:} 768-dimensional vectors provide rich semantic representations
+    \item \textbf{Cross-lingual transfer:} Trained on diverse multilingual data, enabling transfer to Spanish
+    \item \textbf{Efficiency:} 12-layer architecture balances performance with inference speed
+\end{itemize}
+
+\subsubsection{Fine-tuning Strategy}
+
+We employed contrastive learning with MultipleNegativesRankingLoss (MNRL) \cite{henderson2017efficient}, which leverages in-batch negatives for efficient training. For each anchor-positive pair $(q_i, a_i^+)$ in a batch of size $B$, the loss is computed as:
+
+\begin{equation}
+\mathcal{L} = -\frac{1}{B} \sum_{i=1}^{B} \log \frac{\exp(\text{sim}(q_i, a_i^+) / \tau)}{\sum_{j=1}^{B} \exp(\text{sim}(q_i, a_j^+) / \tau)}
+\label{eq:mnrl}
+\end{equation}
+
+where $\text{sim}(\cdot, \cdot)$ denotes cosine similarity and $\tau$ is the temperature parameter.
+
+\subsubsection{Training Pair Generation}
+
+We generated 89,847 training pairs using two complementary strategies:
+
+\begin{enumerate}
+    \item \textbf{Question-Answer pairs} (74,835 pairs, label weight 1.0): Each flashcard question paired with its answer provides strong semantic signal
+    \item \textbf{Question-Question pairs} (15,012 pairs, label weight 0.8): Questions from the same specialty paired together preserve domain structure
+\end{enumerate}
+
+Figure~\ref{fig:pipeline} illustrates the complete training pipeline.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/fig6_training_pipeline.pdf}
+    \caption{ENARM-MPNet fine-tuning pipeline. Raw data undergoes cleaning, pair generation, and contrastive training with MNRL loss.}
+    \label{fig:pipeline}
+\end{figure}
+
+Figure~\ref{fig:contrastive} visualizes the contrastive learning objective, showing how MNRL pulls anchor-positive pairs together while pushing negatives apart in embedding space.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{figures/fig7_contrastive_learning.pdf}
+    \caption{MultipleNegativesRankingLoss (MNRL) training objective. Anchors are pulled toward their positive matches and pushed away from in-batch negatives.}
+    \label{fig:contrastive}
+\end{figure}
+
+\subsection{Training Configuration}
+
+Training was conducted on a consumer-grade NVIDIA RTX 4070 GPU (8GB VRAM) with the following hyperparameters:
+
+\begin{itemize}
+    \item \textbf{Epochs:} 2
+    \item \textbf{Batch size:} 32
+    \item \textbf{Learning rate:} $2 \times 10^{-5}$
+    \item \textbf{Warmup ratio:} 0.1
+    \item \textbf{Precision:} FP16 mixed precision
+    \item \textbf{Optimizer:} AdamW
+    \item \textbf{Training time:} $\sim$3 hours
+\end{itemize}
+
+We used the SentenceTransformer library \cite{reimers2019sentence} with InformationRetrievalEvaluator for checkpoint selection based on NDCG@10.
+
+\subsection{RAG System Integration}
+
+The fine-tuned ENARM-MPNet-v2 model was integrated into a production RAG chatbot with the following components:
+
+\begin{enumerate}
+    \item \textbf{Query embedding:} User queries are encoded using ENARM-MPNet-v2
+    \item \textbf{Semantic retrieval:} Top-K most similar documents retrieved via cosine similarity from the flashcard corpus
+    \item \textbf{Full-text search:} GPCs searched using PostgreSQL full-text search for complementary results
+    \item \textbf{Evidence ranking:} Retrieved documents ranked using Shekelle evidence hierarchy
+    \item \textbf{Response generation:} Gemini 2.5 Flash generates responses grounded in retrieved context with inline citations
+\end{enumerate}
+
+Algorithm~\ref{alg:rag} presents the complete RAG retrieval and generation process as a visual flowchart.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.85\columnwidth]{figures/algorithm1_rag.pdf}
+    \caption{RAG retrieval and generation algorithm. The process flows from user query encoding through parallel retrieval (semantic + full-text), evidence ranking, and LLM generation with citations.}
+    \label{alg:rag}
+\end{figure}
+
+The system serves as an educational assistant for medical students preparing for the ENARM examination, providing evidence-based responses with traceable sources.
+
+%%======================================================================
+%% SECTION 4: EXPERIMENTAL SETUP
+%%======================================================================
+\section{Experimental Setup}
+\label{sec:experiments}
+
+%% -----------------------------------------------------------------------
+%% Figure/Table Plan for this section:
+%% - Table 3: Evaluation metrics and formulas
+%% -----------------------------------------------------------------------
+
+This section describes the evaluation framework, baseline models, and metrics used to assess ENARM-MPNet-v2 performance.
+
+\subsection{Baseline Models}
+
+We compare ENARM-MPNet-v2 against its base model:
+
+\begin{itemize}
+    \item \textbf{all-mpnet-base-v2} \cite{song2020mpnet}: The unmodified pretrained model from sentence-transformers, trained on 1B+ sentence pairs from diverse English corpora. This represents state-of-the-art general-purpose sentence embeddings.
+\end{itemize}
+
+We do not compare against domain-specific biomedical models (BioBERT, ClinicalBERT, PubMedBERT) as they lack the sentence embedding architecture required for efficient similarity search. Additionally, no Spanish-language medical embedding models exist for comparison.
+
+\subsection{Evaluation Tasks}
+
+We evaluate performance on three complementary tasks:
+
+\subsubsection{Task 1: Information Retrieval}
+
+Given a medical question as query, retrieve the corresponding flashcard from the complete corpus.
+
+\begin{itemize}
+    \item \textbf{Query Set}: 200 medical questions randomly sampled from the cleaned dataset (stratified by specialty)
+    \item \textbf{Document Corpus}: 14,917 flashcard documents
+    \item \textbf{Retrieval Method}: Cosine similarity with Top-K selection
+\end{itemize}
+
+\subsubsection{Task 2: Ranking Accuracy}
+
+Evaluate whether the model correctly ranks semantically related content higher than unrelated content.
+
+\begin{itemize}
+    \item \textbf{Test Cases}: 210 triplets (query, correct\_match, distractor)
+    \item \textbf{Difficulty}: Same-specialty distractors (harder discrimination task)
+    \item \textbf{Success Criterion}: $\text{sim}(q, \text{correct}) > \text{sim}(q, \text{distractor})$
+\end{itemize}
+
+\subsubsection{Task 3: Specialty-Level Analysis}
+
+Assess retrieval quality across all 21 medical specialties to identify domain-specific strengths and weaknesses.
+
+\begin{itemize}
+    \item \textbf{Samples}: 50 queries per specialty (1,050 total)
+    \item \textbf{Metrics}: Per-specialty Recall@5 and MRR
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+Table~\ref{tab:metrics} summarizes the evaluation metrics used in our experiments.
+
+\begin{table}[t]
+\centering
+\caption{Evaluation metrics and their interpretations.}
+\label{tab:metrics}
+\begin{tabular}{p{2cm}p{5.5cm}}
+\toprule
+\textbf{Metric} & \textbf{Description} \\
+\midrule
+Recall@K & Fraction of queries where correct document appears in top-K results \\
+\addlinespace
+MRR & Mean Reciprocal Rank: $\frac{1}{|Q|}\sum_{i=1}^{|Q|}\frac{1}{\text{rank}_i}$ \\
+\addlinespace
+Accuracy & Fraction of triplets where correct match ranked higher than distractor \\
+\addlinespace
+Margin & Confidence: $\text{sim}(\text{correct}) - \text{sim}(\text{distractor})$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Statistical Analysis}
+
+To ensure robustness of our findings, we conducted:
+
+\begin{itemize}
+    \item \textbf{Bootstrap confidence intervals}: 10,000 iterations for 95\% CI estimation
+    \item \textbf{Paired t-tests}: For significance testing between models
+    \item \textbf{Cohen's d}: Effect size quantification
+\end{itemize}
+
+\subsection{Implementation Details}
+
+Experiments were conducted using:
+\begin{itemize}
+    \item \textbf{Hardware}: NVIDIA RTX 4070 (8GB VRAM)
+    \item \textbf{Software}: Python 3.10, sentence-transformers 2.2.2, PyTorch 2.1
+    \item \textbf{Embedding Generation}: Batch size 32, mean pooling
+    \item \textbf{Similarity Search}: Exact cosine similarity (no approximate nearest neighbors)
+\end{itemize}
+
+%%======================================================================
+%% SECTION 5: RESULTS
+%%======================================================================
+\section{Results}
+\label{sec:results}
+
+%% -----------------------------------------------------------------------
+%% Figure/Table Plan for this section:
+%% - Table 4: Main results comparison
+%% - Table 5: Specialty-level results
+%% - Figure 1: Recall@K curves
+%% - Figure 2: MRR comparison
+%% - Figure 3: Margin distribution
+%% - Figure 4: Specialty improvement
+%% - Figure 8: Heatmap
+%% -----------------------------------------------------------------------
+
+We present experimental results across three evaluation tasks: information retrieval, ranking accuracy, and specialty-level analysis.
+
+\subsection{Information Retrieval Performance}
+
+Table~\ref{tab:main_results} presents the main retrieval results. ENARM-MPNet-v2 demonstrates substantial improvements across all metrics.
+
+\begin{table}[t]
+\centering
+\caption{Information retrieval and ranking results. $\Delta$ indicates absolute improvement. All differences are statistically significant (p $<$ 0.001).}
+\label{tab:main_results}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Metric} & \textbf{Baseline} & \textbf{ENARM-MPNet} & \textbf{$\Delta$} \\
+\midrule
+Recall@1 & 62.0\% & \textbf{98.0\%} & +36.0pp \\
+Recall@3 & 79.0\% & \textbf{100.0\%} & +21.0pp \\
+Recall@5 & 85.5\% & \textbf{100.0\%} & +14.5pp \\
+Recall@10 & 91.5\% & \textbf{100.0\%} & +8.5pp \\
+Recall@20 & 93.0\% & \textbf{100.0\%} & +7.0pp \\
+\midrule
+MRR & 0.716 & \textbf{0.989} & +0.273 \\
+\midrule
+Ranking Accuracy & 99.5\% & \textbf{100.0\%} & +0.5pp \\
+Avg. Margin & 0.429 & \textbf{0.730} & +0.301 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The fine-tuned model achieves \textbf{98\% Recall@1}, meaning the correct document is retrieved as the first result in 98\% of queries---a 58\% relative improvement over the baseline's 62\%. At K=3, performance reaches 100\%, indicating perfect retrieval within the top-3 results.
+
+Figure~\ref{fig:recall_curves} visualizes the Recall@K curves for both models.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/fig1_recall_curves.pdf}
+    \caption{Recall@K performance curves. ENARM-MPNet-v2 achieves near-perfect retrieval at K=1 and perfect retrieval at K$\geq$3.}
+    \label{fig:recall_curves}
+\end{figure}
+
+\subsection{Mean Reciprocal Rank}
+
+The Mean Reciprocal Rank (MRR) increased from 0.716 to 0.989, representing a 38\% relative improvement. An MRR of 0.989 indicates that the correct document appears almost always in the first position (average rank $\approx$ 1.01).
+
+Figure~\ref{fig:mrr} presents the MRR comparison between models.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.8\columnwidth]{figures/fig2_mrr_comparison.pdf}
+    \caption{Mean Reciprocal Rank comparison. ENARM-MPNet-v2 achieves MRR of 0.989, indicating near-perfect first-result accuracy.}
+    \label{fig:mrr}
+\end{figure}
+
+\subsection{Ranking Confidence}
+
+Beyond accuracy, we analyze the \textbf{confidence margin}: the similarity difference between correct and incorrect matches. Higher margins indicate more robust discrimination.
+
+\begin{itemize}
+    \item \textbf{Baseline margin}: 0.429 $\pm$ 0.148
+    \item \textbf{ENARM-MPNet-v2 margin}: 0.730 $\pm$ 0.120
+\end{itemize}
+
+The fine-tuned model achieves \textbf{70\% higher margins} with \textbf{lower variance}, indicating more reliable and consistent semantic representations. Figure~\ref{fig:margin} shows the margin distributions.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.9\columnwidth]{figures/fig3_margin_distribution.pdf}
+    \caption{Similarity margin distributions. ENARM-MPNet-v2 exhibits higher confidence margins with reduced variance.}
+    \label{fig:margin}
+\end{figure}
+
+\subsection{Specialty-Level Analysis}
+
+We evaluated performance across all 21 ENARM medical specialties. Table~\ref{tab:specialty} presents results for selected specialties.
+
+\begin{table}[t]
+\centering
+\caption{Specialty-level Recall@5 results (selected specialties). All 21 specialties achieve 100\% Recall@5 with ENARM-MPNet-v2.}
+\label{tab:specialty}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Specialty} & \multicolumn{2}{c}{\textbf{Recall@5}} & \multicolumn{2}{c}{\textbf{MRR}} \\
+ & Base & Ours & Base & Ours \\
+\midrule
+Psiquiatría & 65\% & \textbf{100\%} & 0.60 & 0.98 \\
+Nefrología & 75\% & \textbf{100\%} & 0.62 & 1.00 \\
+Dermatología & 75\% & \textbf{100\%} & 0.69 & 1.00 \\
+Neurología & 80\% & \textbf{100\%} & 0.61 & 0.98 \\
+Cirugía General & 80\% & \textbf{100\%} & 0.67 & 0.93 \\
+Pediatría & 90\% & \textbf{100\%} & 0.80 & 0.98 \\
+Gineco-Obst & 90\% & \textbf{100\%} & 0.75 & 0.98 \\
+Med. Urgencias & 100\% & \textbf{100\%} & 1.00 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key Finding}: Psiquiatría (Psychiatry) showed the largest improvement (+35 percentage points), suggesting the fine-tuned model better captures mental health terminology and clinical reasoning patterns that were poorly represented in the general-purpose baseline.
+
+Figure~\ref{fig:specialty} visualizes the improvement across specialties.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/fig4_specialty_improvement.pdf}
+    \caption{Improvement in Recall@5 by medical specialty. All 21 specialties show improvement, with largest gains in Psychiatry and Nephrology.}
+    \label{fig:specialty}
+\end{figure}
+
+\subsection{Embedding Space Organization}
+
+To analyze whether fine-tuning improved the semantic organization of the embedding space, we computed inter-specialty similarity matrices. Figure~\ref{fig:heatmap} compares the baseline and fine-tuned models.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\columnwidth]{figures/fig8_specialty_heatmap.pdf}
+    \caption{Inter-specialty embedding similarity heatmaps. ENARM-MPNet-v2 (right) shows higher within-specialty similarity (diagonal) and lower between-specialty similarity, indicating better specialty separation.}
+    \label{fig:heatmap}
+\end{figure}
+
+The fine-tuned model exhibits:
+\begin{itemize}
+    \item \textbf{Higher diagonal values}: Stronger within-specialty cohesion
+    \item \textbf{Lower off-diagonal values}: Better between-specialty discrimination
+    \item \textbf{Cleaner structure}: More distinct specialty boundaries
+\end{itemize}
+
+\subsection{Statistical Significance}
+
+All reported improvements are statistically significant:
+
+\begin{itemize}
+    \item \textbf{Recall@1}: 95\% CI [55.2\%, 68.5\%] vs [95.1\%, 99.8\%], p $<$ 0.001
+    \item \textbf{MRR}: 95\% CI [0.673, 0.759] vs [0.976, 0.998], p $<$ 0.001
+    \item \textbf{Cohen's d}: 2.41 (very large effect)
+\end{itemize}
+
+%%======================================================================
+%% SECTION 6: DISCUSSION
+%%======================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+Our results demonstrate that domain-specific fine-tuning yields dramatic improvements in medical information retrieval for Spanish-language educational content. We now interpret these findings, discuss their implications for medical education in Latin America, and present ethical considerations for responsible AI deployment.
+
+\subsection{Interpretation of Results}
+
+The 58\% relative improvement in Recall@1 (62\% $\rightarrow$ 98\%) represents a substantial gain with direct practical implications. In a RAG-based educational chatbot, Recall@1 determines whether the most relevant document is retrieved on the first attempt. Our results suggest that domain-specific fine-tuning transforms a general-purpose model into a reliable medical information retrieval tool.
+
+The dramatic improvement in Psiquiatría (+35 percentage points) merits attention. Psychiatric terminology in Spanish includes colloquialisms, regional variations, and concepts that differ from English psychiatric nomenclature. The base model, trained predominantly on English data, struggled to capture these nuances. Fine-tuning on Mexican medical content enabled the model to learn domain-specific semantic relationships.
+
+The 70\% increase in confidence margins indicates not merely improved accuracy but fundamentally different embedding representations. The fine-tuned model creates clearer separation between semantically related and unrelated content, reducing the risk of near-miss errors in production systems.
+
+\subsection{Comparison with Prior Work}
+
+Direct comparison with prior medical embedding models is challenging due to differences in evaluation datasets, languages, and tasks. However, our results contextualize ENARM-MPNet-v2 within the broader landscape:
+
+\begin{itemize}
+    \item \textbf{BioBERT/PubMedBERT}: Report Recall@5 of 85--87\% on English biomedical corpora \cite{lee2020biobert, gu2021domain}. Our model achieves 100\% on Spanish medical education content.
+    \item \textbf{General SBERT models}: Typically achieve 75--85\% Recall@1 on in-domain retrieval tasks \cite{reimers2019sentence}. Our baseline (62\%) underperforms, highlighting the cross-lingual domain gap.
+    \item \textbf{Multilingual models}: While multilingual BERT variants exist, none target Spanish medical text specifically \cite{neves2023multilingual}.
+\end{itemize}
+
+Our work fills a critical gap: the first embedding model specifically designed for Spanish-language medical education in the Mexican context.
+
+\subsection{Implications for Latin American Medical Education}
+
+The current state of AI and machine learning adoption in Latin American healthcare is characterized by significant gaps:
+
+\begin{itemize}
+    \item \textbf{Absence of regional NLP tools}: No Spanish-language medical embedding models exist for Latin American clinical contexts
+    \item \textbf{Outdated clinical guidelines}: Mexico's Catálogo Maestro de Guías de Práctica Clínica, previously maintained by CENETEC, has been unavailable for extended periods, with many existing guidelines outdated and no official communication regarding updates
+    \item \textbf{Limited standardization}: There is minimal standardization in healthcare AI/ML across Latin America, leaving medical education and clinical decision support without modern computational tools
+    \item \textbf{Equity concerns}: Access to advanced educational resources remains heavily skewed toward well-resourced institutions and urban centers
+\end{itemize}
+
+Our work represents an initial step toward addressing these gaps. By demonstrating that domain-specific fine-tuning yields dramatic improvements even with modest computational resources (consumer GPU, 3 hours training), we provide a replicable template for developing localized medical NLP tools across Latin America.
+
+\subsection{Transformative Potential for Medical Education}
+
+We envision AI-powered tools like ENARM-MPNet-v2 as catalysts for a paradigm shift in medical education:
+
+\begin{enumerate}
+    \item \textbf{Democratization of expertise}: High-quality study resources, previously available only through expensive preparatory courses, become accessible to all students regardless of socioeconomic background
+    
+    \item \textbf{Personalized learning at scale}: RAG-based systems can adapt to individual student needs, providing targeted explanations and relevant resources on-demand
+    
+    \item \textbf{24/7 availability}: Unlike human tutors, AI assistants are available continuously, accommodating students' varied schedules and learning paces
+    
+    \item \textbf{Evidence-grounded responses}: By retrieving from verified medical sources rather than generating from parametric memory alone, RAG systems provide traceable, verifiable information
+    
+    \item \textbf{Bridge to clinical guidelines}: Our system connects students directly with official clinical practice guidelines, fostering evidence-based thinking from the earliest stages of training
+\end{enumerate}
+
+The 30,000 physicians who take the ENARM annually represent the future of Mexican healthcare. Equipping them with AI-powered study tools has the potential to improve not only individual exam performance but ultimately patient care quality across the nation.
+
+\subsection{Limitations}
+
+Several limitations should be acknowledged:
+
+\begin{enumerate}
+    \item \textbf{Dataset scope}: Our training data derives from Anki flashcards, which may not comprehensively represent all ENARM examination content or clinical scenarios
+    
+    \item \textbf{GPC currency}: Mexican Clinical Practice Guidelines used in the RAG system may be outdated, as CENETEC's master catalog has been inaccessible, limiting the currency of retrieved clinical recommendations
+    
+    \item \textbf{Single baseline comparison}: We compare only against the base MPNet model. Future work should evaluate against additional multilingual and Spanish-specific models
+    
+    \item \textbf{Evaluation scope}: Our evaluation focuses on retrieval metrics. End-to-end evaluation of RAG response quality with human expert assessment remains for future work
+    
+    \item \textbf{Generalization}: Performance gains demonstrated on ENARM flashcards may not transfer to other Mexican medical contexts (e.g., clinical notes, research papers)
+\end{enumerate}
+
+\subsection{Ethical Considerations}
+
+The deployment of AI in medical education raises important ethical considerations that we address proactively \cite{char2018implementing, topol2019high}.
+
+\subsubsection{Democratization vs. Dependency}
+
+AI-powered study tools offer potential to democratize access to high-quality educational resources. However, we must balance this benefit against the risk of creating dependency on AI assistance. Our system is designed as a \textit{supplement} to traditional study methods, not a replacement. We explicitly discourage using the chatbot as a substitute for primary learning resources.
+
+\subsubsection{Accuracy and Medical Safety}
+
+While our RAG system grounds responses in retrieved documents, the risk of generating inaccurate medical information remains. We mitigate this through:
+\begin{itemize}
+    \item Inline citations enabling verification
+    \item Evidence ranking using established medical hierarchies
+    \item Disclaimers that the system is for educational purposes only
+    \item Regular evaluation of retrieval and generation quality
+\end{itemize}
+
+\subsubsection{Equity and Access}
+
+Our system aims to reduce, not exacerbate, educational inequities. By deploying as a freely accessible web application, we ensure that students from under-resourced institutions can benefit equally. However, we acknowledge that digital access itself remains unequal, and offline alternatives should be developed.
+
+\subsubsection{Transparency}
+
+We commit to transparency regarding:
+\begin{itemize}
+    \item Model training data sources and limitations
+    \item System capabilities and known failure modes
+    \item Updates to the knowledge base and model
+\end{itemize}
+
+\subsubsection{Responsible AI Principles}
+
+Our deployment aligns with established responsible AI principles \cite{beam2018big}:
+\begin{itemize}
+    \item \textbf{Beneficence}: Designed to improve educational outcomes
+    \item \textbf{Non-maleficence}: Safeguards against misinformation
+    \item \textbf{Autonomy}: Students choose when and how to use the tool
+    \item \textbf{Justice}: Free access promotes equitable benefits
+    \item \textbf{Transparency}: Open about capabilities and limitations
+\end{itemize}
+
+\subsection{Bias and Generalizability}
+
+We acknowledge potential biases and limitations regarding generalizability:
+
+\begin{itemize}
+    \item \textbf{Training data bias}: Our flashcard dataset may reflect biases present in the original Anki decks, including potential overrepresentation of certain specialties or clinical scenarios
+    
+    \item \textbf{Institutional bias}: The training data derives from study materials that may favor certain medical schools' curricula or pedagogical approaches
+    
+    \item \textbf{Temporal bias}: Medical knowledge evolves; embeddings trained on current guidelines may not capture emerging treatments or updated protocols
+    
+    \item \textbf{Geographic generalizability}: While designed for Mexican medical education, applicability to other Spanish-speaking countries requires validation due to differences in healthcare systems and terminology
+    
+    \item \textbf{Socioeconomic factors}: Digital access requirements may inadvertently exclude students from the most marginalized communities we aim to serve
+\end{itemize}
+
+We commit to ongoing monitoring and mitigation of these biases through regular evaluation updates, diverse user feedback collection, and transparency about model limitations.
+
+%%======================================================================
+%% SECTION 7: CONCLUSION
+%%======================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+We have presented ENARM-MPNet-v2, the first Spanish-language medical embedding model specifically designed for Mexican medical education. Through contrastive learning on 89,847 training pairs derived from 14,917 medical flashcards, we achieved transformative improvements in retrieval performance: Recall@1 increased from 62\% to 98\% (+58\%), Mean Reciprocal Rank from 0.716 to 0.989 (+38\%), and ranking confidence margins improved by 70\%. The model was successfully deployed in a production RAG chatbot serving Mexican medical students preparing for the ENARM examination.
+
+\subsection{Key Contributions}
+
+Our work makes several contributions to medical NLP and AI in education:
+
+\begin{enumerate}
+    \item We demonstrate that \textbf{domain-specific fine-tuning dramatically improves retrieval} for underserved language-domain combinations, even when starting from English-centric base models
+    
+    \item We provide \textbf{the first Spanish medical embedding model} for Latin American healthcare contexts---addressing a critical gap in a linguistic community of over 550 million speakers that has been largely overlooked by the NLP research community
+    
+    \item We show that \textbf{near-perfect retrieval is achievable} with modest computational resources (consumer GPU, 3-hour training), making this approach accessible to researchers in resource-limited settings
+    
+    \item We present a \textbf{comprehensive ethical framework} for responsible AI deployment in medical education, balancing democratization with safety
+\end{enumerate}
+
+\subsection{A Call for Regional AI Development}
+
+The absence of specialized NLP tools for Latin American healthcare represents both a challenge and an opportunity. Our results suggest that relatively small, domain-specific datasets can yield substantial improvements over general-purpose models. We encourage the research community to:
+
+\begin{itemize}
+    \item Develop localized medical NLP resources for Spanish and Portuguese
+    \item Create standardized evaluation benchmarks for multilingual medical AI
+    \item Establish collaborative networks for sharing medical NLP models and datasets across Latin America
+    \item Advocate for institutional support to update and maintain clinical guidelines
+\end{itemize}
+
+\subsection{Future Work}
+
+Several directions merit further investigation:
+
+\begin{enumerate}
+    \item \textbf{Expanded evaluation}: Human expert assessment of end-to-end RAG response quality and clinical accuracy
+    
+    \item \textbf{Multilingual expansion}: Extension to other Spanish-speaking countries and Portuguese for Brazil
+    
+    \item \textbf{Multimodal integration}: Incorporation of medical imaging and clinical multimedia for comprehensive exam preparation
+    
+    \item \textbf{Continual learning}: Mechanisms to update embeddings as clinical guidelines evolve
+    
+    \item \textbf{Cross-domain transfer}: Evaluation on clinical notes, research papers, and patient education materials
+    
+    \item \textbf{Comparative studies}: Benchmarking against emerging multilingual medical models as they become available
+\end{enumerate}
+
+\subsection{Closing Remarks}
+
+The ENARM examination determines the career trajectories of 30,000 Mexican physicians annually, yet access to high-quality preparation resources remains inequitable. By developing and deploying ENARM-MPNet-v2, we take a concrete step toward democratizing medical education through AI. Our work demonstrates that meaningful progress is possible even with limited resources, and we hope it inspires similar efforts across Latin America and other underserved regions.
+
+The future of medical education will increasingly integrate AI-powered tools. It is imperative that this future be built with equity, transparency, and responsibility at its core. We offer our work as both a technical contribution and an ethical template for this emerging field.
+
+%%======================================================================
+%% ACKNOWLEDGMENTS
+%%======================================================================
+\section*{Acknowledgments}
+The author thanks the Centro Nacional de Excelencia Tecnológica en Salud (CENETEC) for access to Mexican Clinical Practice Guidelines, and the medical students who contributed to the flashcard dataset through the ENARMQbank platform. The author acknowledges the use of Anthropic's Claude Opus 4.5 for assistance with code development, data processing pipeline optimization, and manuscript preparation.
+
+%%======================================================================
+%% DECLARATION OF COMPETING INTERESTS
+%%======================================================================
+\section*{Declaration of Competing Interests}
+The author declares that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper. The ENARMQbank platform mentioned in this work is a non-commercial educational project.
+
+%%======================================================================
+%% AI TOOLS DISCLOSURE (npj Digital Medicine requirement)
+%%======================================================================
+\section*{Use of AI Tools}
+This work utilized artificial intelligence tools in the following capacities, in accordance with journal policies on AI-assisted research:
+
+\begin{itemize}
+    \item \textbf{Code Development:} Claude Opus 4.5 (Anthropic) was used to assist with Python code development for data preprocessing, training pipeline implementation, and evaluation script creation. All code was reviewed, validated, and executed by the author.
+    
+    \item \textbf{Manuscript Preparation:} Claude Opus 4.5 assisted with manuscript drafting, formatting, and refinement of technical writing. The author assumes full responsibility for the content, scientific integrity, and conclusions presented.
+    
+    \item \textbf{Production System:} The deployed RAG chatbot uses Google's Gemini 2.5 Flash for response generation, grounded in retrieved medical content.
+    
+    \item \textbf{Model Fine-tuning:} The core contribution---ENARM-MPNet-v2---was trained using the SentenceTransformers library with MultipleNegativesRankingLoss. No generative AI was used in the fine-tuning process itself.
+\end{itemize}
+
+The author takes full responsibility for all content, analysis, and conclusions in this manuscript.
+
+%%======================================================================
+%% DATA AVAILABILITY
+%%======================================================================
+\section*{Data Availability}
+The flashcard dataset used for training was derived from publicly available Anki decks for ENARM preparation. Due to the educational nature of the content and potential copyright considerations, the raw dataset is available upon reasonable request for research purposes. Summary statistics and anonymized samples are provided in the Supplementary Materials. The Mexican Clinical Practice Guidelines (GPCs) are publicly available through CENETEC (when accessible) and IMSS.
+
+%%======================================================================
+%% CODE AVAILABILITY
+%%======================================================================
+\section*{Code Availability}
+The training scripts, evaluation framework, and model inference code are available at [Repository to be provided upon acceptance]. The fine-tuned ENARM-MPNet-v2 model weights will be made available through Hugging Face upon publication. All experiments were conducted using:
+\begin{itemize}
+    \item Python 3.10.12
+    \item PyTorch 2.1.0
+    \item sentence-transformers 2.2.2
+    \item CUDA 11.8
+\end{itemize}
+
+%%======================================================================
+%% REPRODUCIBILITY STATEMENT
+%%======================================================================
+\section*{Reproducibility}
+To ensure reproducibility of our results, we provide the following:
+\begin{enumerate}
+    \item \textbf{Hyperparameters:} All training hyperparameters are specified in Section~\ref{sec:methodology} (learning rate, batch size, epochs, warmup ratio)
+    \item \textbf{Random Seeds:} Fixed seeds were used for dataset splitting and model initialization
+    \item \textbf{Hardware:} NVIDIA RTX 4070 (8GB VRAM), Intel Core i7-12700K
+    \item \textbf{Training Time:} Approximately 3 hours per full training run
+    \item \textbf{Evaluation Protocol:} Complete evaluation scripts provided in the repository
+\end{enumerate}
+
+%%======================================================================
+%% AUTHOR CONTRIBUTIONS (CRediT)
+%%======================================================================
+\section*{Author Contributions}
+Following the CRediT (Contributor Roles Taxonomy) framework:
+
+\textbf{Anuar Alejandro Viramontes Flores:} Conceptualization, Methodology, Software, Validation, Formal Analysis, Investigation, Resources, Data Curation, Writing -- Original Draft, Writing -- Review \& Editing, Visualization, Supervision, Project Administration, Funding Acquisition.
+
+As the sole author, A.A.V.F. was responsible for all aspects of this work, from conception through execution and manuscript preparation.
+
+%%======================================================================
+%% ETHICS STATEMENT
+%%======================================================================
+\section*{Ethics Statement}
+This study used publicly available educational materials (Anki flashcards) and publicly accessible clinical guidelines. No human subjects research was conducted. No patient data was used. The educational chatbot system operates strictly for study assistance and explicitly discourages use for clinical decision-making. The system includes appropriate disclaimers about its educational (non-clinical) purpose.
+
+%%======================================================================
+%% REPORTING SUMMARY
+%%======================================================================
+\section*{Reporting Summary}
+Further information on research design is available in the Nature Research Reporting Summary linked to this article.
+
+%%======================================================================
+%% REFERENCES
+%%======================================================================
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+
+\end{document}

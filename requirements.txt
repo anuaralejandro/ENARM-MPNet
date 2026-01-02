@@ -1,0 +1,22 @@
+# Core dependencies
+torch>=2.1.0
+sentence-transformers>=2.2.2
+transformers>=4.35.0
+datasets>=2.14.0
+
+# Evaluation
+scikit-learn>=1.3.0
+scipy>=1.11.0
+numpy>=1.24.0
+pandas>=2.0.0
+
+# Visualization
+matplotlib>=3.8.0
+seaborn>=0.13.0
+
+# Utilities
+tqdm>=4.66.0
+jsonlines>=4.0.0
+
+# Optional: GPU support
+# Install PyTorch with CUDA: https://pytorch.org/get-started/locally/
