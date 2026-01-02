@@ -3,15 +3,15 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1+-ee4c2c.svg)](https://pytorch.org/)
-[![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/anuario/enarm-mpnet-v2)
+[![Hugging Face](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-yellow)](https://huggingface.co/anuario/enarm-mpnet-v5)
 
 ## 🎯 Overview
 
-**ENARM-MPNet-v2** is the first Spanish-language medical embedding model specifically designed for Mexican medical education. Fine-tuned using contrastive learning on **12,467 clean training pairs** from 14,917 medical flashcards across 21 clinical specialties.
+**ENARM-MPNet-v5** is the first Spanish-language medical embedding model specifically designed for Mexican medical education. Fine-tuned using contrastive learning on **12,467 clean training pairs** from 14,917 medical flashcards across 21 clinical specialties.
 
 ### Key Results
 
-| Metric | Baseline | ENARM-MPNet-v2 | Improvement |
+| Metric | Baseline | ENARM-MPNet-v5 | Improvement |
 |--------|----------|----------------|-------------|
 | Recall@1 | 62.0% | **99.5%** | +60% |
 | Recall@5 | 85.5% | **100.0%** | +17% |
@@ -44,7 +44,7 @@ enarm-mpnet/
 ├── data/
 │   └── (dataset files - available upon request)
 ├── models/
-│   └── enarm-mpnet-v2/
+│   └── enarm-mpnet-v5/
 ├── paper/
 │   ├── enarm_mpnet_elsevier.tex
 │   ├── references.bib
@@ -79,7 +79,7 @@ pip install -r requirements.txt
 from sentence_transformers import SentenceTransformer
 
 # Load from Hugging Face
-model = SentenceTransformer('anuario/enarm-mpnet-v2')
+model = SentenceTransformer('anuario/enarm-mpnet-v5')
 
 # Encode medical queries
 queries = [
@@ -121,7 +121,7 @@ python evaluation/run_all_evaluations.py
 
 ## 📊 Model Architecture
 
-ENARM-MPNet-v2 uses the MPNet architecture with:
+ENARM-MPNet-v5 uses the MPNet architecture with:
 - 12 transformer layers
 - 768-dimensional embeddings
 - Mean pooling for sentence representations
@@ -186,4 +186,4 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 ---
 
 *First Spanish-language medical embedding model for Latin American healthcare contexts*
-*Achieving 99.5% Recall@1 with only 13 minutes of training*
+*ENARM-MPNet-v5: Achieving 99.5% Recall@1 with only 13 minutes of training*
